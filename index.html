@@ -71,8 +71,8 @@
             btn.innerHTML = '<span class="loading"></span> Memproses...';
 
             try {
-                // Menggunakan Cobalt API Public Instance (Support CORS)
-                const response = await fetch('https://api.cobalt.tools/api/json', {
+                // Menggunakan Cobalt API Alternative Instance (Lebih stabil di Indonesia)
+                const response = await fetch('https://co.wuk.sh/api/json', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
