@@ -3,88 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YT Downloader - Piped API</title>
+    <title>YT Downloader Pro</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; }
-        input { width: 85%; padding: 14px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
-        button { background: #ff0000; color: white; border: none; padding: 14px 40px; border-radius: 10px; font-size: 17px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #cc0000; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #status { margin-top: 25px; color: #333; word-break: break-all; line-height: 1.6; }
-        .download-btn { display: inline-block; margin-top: 15px; padding: 12px 25px; background: #28a745; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
-        .error { color: #dc3545; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 650px; margin: 30px auto; padding: 20px; background: #f9f9f9; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; }
+        h2 { color: #ff0000; margin-bottom: 5px; }
+        p { color: #666; font-size: 14px; margin-top: 0; }
+        input { width: 100%; padding: 15px; margin: 20px 0; border: 2px solid #eee; border-radius: 10px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: #ff0000; outline: none; }
+        button { background: #ff0000; color: white; border: none; padding: 15px 40px; border-radius: 10px; font-size: 17px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
+        button:hover { background: #cc0000; transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        
+        /* Style untuk hasil download */
+        .result-card { margin-top: 25px; text-align: left; background: #f0f8ff; padding: 20px; border-radius: 12px; border-left: 5px solid #007bff; }
+        .video-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #333; word-break: break-word; }
+        .format-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .format-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        .format-info { display: flex; flex-direction: column; }
+        .format-type { font-weight: bold; color: #007bff; font-size: 14px; }
+        .format-detail { font-size: 12px; color: #777; margin-top: 3px; }
+        .download-link { background: #28a745; color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; white-space: nowrap; }
+        .download-link:hover { background: #218838; }
+        
+        .error-msg { color: #dc3545; margin-top: 20px; font-weight: 500; line-height: 1.5; }
+        .loading { color: #007bff; margin-top: 20px; font-weight: 500; }
     </style>
 </head>
 <body>
-    <h2>🎵 YouTube Downloader</h2>
-    <p>Masukkan link video YouTube:</p>
-    
-    <input type="text" id="urlInput" placeholder="https://youtube.com/watch?v=...">
-    <br>
-    <button id="btnDownload" onclick="getVideoInfo()">Cari Video</button>
-    
-    <div id="status"></div>
+    <div class="container">
+        <h2>🎵 YouTube Downloader Pro</h2>
+        <p>MP4 / MP3 • Resolusi & Ukuran File Lengkap</p>
+        
+        <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini...">
+        <button id="btnDownload" onclick="fetchVideoData()">Cari Video</button>
+        
+        <div id="status"></div>
+    </div>
 
     <script>
-        async function getVideoInfo() {
+        // Daftar instance Piped yang aktif (fallback jika satu mati)
+        const INSTANCES = [
+            'https://pipedapi.kavin.rocks',
+            'https://pipedapi.moomoo.me',
+            'https://api.piped.projectsegfau.lt',
+            'https://piped-api.privacydev.net'
+        ];
+
+        async function fetchWithFallback(url) {
+            for (const instance of INSTANCES) {
+                try {
+                    const response = await fetch(`${instance}${url}`);
+                    if (response.ok) return await response.json();
+                } catch (e) {
+                    console.log(`Instance ${instance} gagal, mencoba berikutnya...`);
+                    continue;
+                }
+            }
+            throw new Error("Semua server sedang sibuk. Coba lagi nanti.");
+        }
+
+        async function fetchVideoData() {
             const url = document.getElementById('urlInput').value.trim();
             const btn = document.getElementById('btnDownload');
             const status = document.getElementById('status');
             
-            if (!url || !url.includes('youtube.com') && !url.includes('youtu.be')) {
+            if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
                 alert("Masukkan link YouTube yang valid!");
                 return;
             }
 
             btn.disabled = true;
-            btn.innerText = "Mencari...";
-            status.innerHTML = "⏳ Sedang mengambil informasi dari YouTube...";
+            btn.innerText = "Sedang Mencari...";
+            status.innerHTML = '<div class="loading">⏳ Menghubungi server YouTube...</div>';
 
             try {
-                // Menggunakan Piped API (Instance publik yang mendukung CORS)
-                const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
-                const response = await fetch(`https://pipedapi.kavin.rocks/streams/${videoId}`);
+                // Ekstrak Video ID
+                let videoId = '';
+                if (url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
+                else if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
                 
-                if (!response.ok) throw new Error('Video tidak ditemukan atau diblokir');
+                if (!videoId) throw new Error("Link tidak valid");
+
+                // Ambil data video
+                const data = await fetchWithFallback(`/streams/${videoId}`);
                 
-                const data = await response.json();
-                
-                // Cari stream video terbaik (biasanya index terakhir atau yang tertinggi)
-                // Untuk simplifikasi, kita ambil audio+video muxed pertama atau video stream
-                let downloadUrl = '';
-                let formatName = 'MP4';
-                
-                // Coba cari video stream yang ada audio (muxed)
-                const muxedStream = data.videoStreams?.find(s => s.mimeType === 'video/mp4' && s.quality === '360p');
-                const bestStream = data.videoStreams?.find(s => s.mimeType === 'video/mp4');
-                
-                if (muxedStream) {
-                    downloadUrl = muxedStream.url;
-                    formatName = 'MP4 360p (Ada Suara)';
-                } else if (bestStream) {
-                    downloadUrl = bestStream.url;
-                    formatName = `MP4 ${bestStream.quality}`;
-                } else {
-                    // Fallback ke audio jika tidak ada video stream
-                    const audioStream = data.audioStreams?.[0];
-                    if (audioStream) {
-                        downloadUrl = audioStream.url;
-                        formatName = 'Audio M4A';
-                    }
+                if (!data.title) throw new Error("Video tidak ditemukan atau diblokir");
+
+                // Proses format MP4 dan MP3
+                let mp4Formats = [];
+                let mp3Format = null;
+
+                // Cari format MP4 (muxed atau video only)
+                if (data.videoStreams) {
+                    data.videoStreams.forEach(stream => {
+                        if (stream.mimeType === 'video/mp4') {
+                            // Konversi bytes ke MB
+                            const sizeMB = stream.contentLength ? (parseInt(stream.contentLength) / (1024*1024)).toFixed(1) + ' MB' : 'Ukuran tidak diketahui';
+                            mp4Formats.push({
+                                quality: stream.quality || 'Unknown',
+                                size: sizeMB,
+                                url: stream.url,
+                                type: 'MP4'
+                            });
+                        }
+                    });
                 }
 
-                if (downloadUrl) {
-                    status.innerHTML = `
-                        ✅ <b>${data.title}</b><br>
-                        Format: ${formatName}<br>
-                        <a href="${downloadUrl}" class="download-btn" target="_blank" download>Klik Untuk Unduh</a>
-                    `;
-                } else {
-                    status.innerHTML = `<span class="error">❌ Tidak menemukan format unduhan yang kompatibel.</span>`;
+                // Cari format Audio (MP3/M4A)
+                if (data.audioStreams && data.audioStreams.length > 0) {
+                    const audio = data.audioStreams[0]; // Ambil audio pertama (biasanya yang terbaik)
+                    const sizeMB = audio.contentLength ? (parseInt(audio.contentLength) / (1024*1024)).toFixed(1) + ' MB' : 'Ukuran tidak diketahui';
+                    mp3Format = {
+                        quality: 'Audio Only',
+                        size: sizeMB,
+                        url: audio.url,
+                        type: 'MP3/M4A'
+                    };
                 }
+
+                // Tampilkan hasil
+                let html = `<div class="result-card">
+                    <div class="video-title"> ${data.title}</div>
+                    <div class="format-list">`;
+
+                // Tambahkan opsi MP3 jika ada
+                if (mp3Format) {
+                    html += `<div class="format-item">
+                        <div class="format-info">
+                            <span class="format-type">🎵 ${mp3Format.type}</span>
+                            <span class="format-detail">Ukuran: ${mp3Format.size}</span>
+                        </div>
+                        <a href="${mp3Format.url}" class="download-link" target="_blank" download>Unduh</a>
+                    </div>`;
+                }
+
+                // Tambahkan opsi MP4 (urutkan dari kualitas rendah ke tinggi)
+                mp4Formats.sort((a, b) => parseInt(a.quality) - parseInt(b.quality));
+                mp4Formats.forEach(fmt => {
+                    html += `<div class="format-item">
+                        <div class="format-info">
+                            <span class="format-type">🎬 ${fmt.type} ${fmt.quality}</span>
+                            <span class="format-detail">Ukuran: ${fmt.size}</span>
+                        </div>
+                        <a href="${fmt.url}" class="download-link" target="_blank" download>Unduh</a>
+                    </div>`;
+                });
+
+                html += `</div></div>`;
+                status.innerHTML = html;
 
             } catch (err) {
-                status.innerHTML = `<span class="error">❌ Gagal: ${err.message}<br><small>Coba link lain atau tunggu sebentar.</small></span>`;
+                status.innerHTML = `<div class="error-msg">❌ ${err.message}<br><small>Pastikan link YouTube benar dan coba lagi.</small></div>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Cari Video";
