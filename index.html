@@ -20,7 +20,7 @@
         .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .download-btn { display: inline-block; margin-top: 12px; padding: 10px 24px; background: #2e7d32; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
-        .format-select { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 14px; margin-bottom: 16px; outline: none; }
+        .format-select { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 14px; margin-bottom: 16px; outline: none; background: white; }
     </style>
 </head>
 <body>
@@ -32,7 +32,7 @@
         
         <select id="formatSelect" class="format-select">
             <option value="video">🎬 Video (MP4)</option>
-            <option value="audio">🎧 Audio (MP3/M4A)</option>
+            <option value="audio">🎧 Audio (MP3)</option>
         </select>
         
         <button id="searchBtn" onclick="handleDownload()">Cari Video</button>
@@ -45,11 +45,28 @@
     </div>
 
     <script>
-        // Daftar instance Piped publik (fallback jika satu down)
-        const PIPED_INSTANCES = [
-            'https://pipedapi.kavin.rocks',
-            'https://api.piped.projectsegfau.lt',
-            'https://piped-api.privacy.com.de'
+        // Daftar API publik alternatif dengan parameter yang diperbarui
+        const API_ENDPOINTS = [
+            { 
+                url: 'https://api.cobalt.tools/api/json',
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: (youtubeUrl, format) => JSON.stringify({
+                    url: youtubeUrl,
+                    vQuality: '720',
+                    filenamePattern: 'basic',
+                    downloadMode: format === 'audio' ? 'audio' : 'video'
+                }),
+                parse: (data) => data.url ? { url: data.url, title: data.text || 'Konten berhasil diproses!' } : null
+            },
+            {
+                url: 'https://api.savetube.me/download',
+                method: 'GET',
+                headers: {},
+                body: null,
+                getUrl: (youtubeUrl, format) => `https://api.savetube.me/download?url=${encodeURIComponent(youtubeUrl)}&format=${format}`,
+                parse: (data) => data.status === 'success' ? { url: data.download_url, title: data.title || 'Download Siap!' } : null
+            }
         ];
 
         async function handleDownload() {
@@ -62,102 +79,65 @@
             errorEl.style.display = 'none';
             resultEl.style.display = 'none';
             
-            // Ekstrak Video ID dari berbagai format URL YouTube
-            let videoId = '';
-            try {
-                if (url.includes('youtu.be/')) {
-                    videoId = url.split('youtu.be/')[1].split('?')[0];
-                } else if (url.includes('youtube.com/watch')) {
-                    const urlObj = new URL(url);
-                    videoId = urlObj.searchParams.get('v');
-                } else if (url.includes('youtube.com/shorts/')) {
-                    videoId = url.split('shorts/')[1].split('?')[0];
-                }
-            } catch (e) {
-                showError('Format URL tidak valid!');
-                return;
-            }
-
-            if (!videoId || videoId.length !== 11) {
-                showError('Masukkan link YouTube yang valid!');
+            if (!url) {
+                showError('Masukkan link terlebih dahulu!');
                 return;
             }
 
             btn.disabled = true;
             btn.innerHTML = '<span class="loading"></span> Memproses...';
 
-            let lastError = '';
-            
-            // Coba setiap instance Piped sampai berhasil
-            for (const instance of PIPED_INSTANCES) {
+            // Looping untuk mencoba setiap API secara otomatis jika salah satu sibuk
+            for (const api of API_ENDPOINTS) {
                 try {
-                    const response = await fetch(`${instance}/streams/${videoId}`);
-                    
-                    if (!response.ok) continue;
+                    let response;
+                    if (api.method === 'POST') {
+                        response = await fetch(api.url, {
+                            method: 'POST',
+                            headers: api.headers,
+                            body: api.body(url, format)
+                        });
+                    } else if (api.getUrl) {
+                        response = await fetch(api.getUrl(url, format));
+                    }
+
+                    if (!response || !response.ok) continue;
                     
                     const data = await response.json();
+                    const result = api.parse(data);
                     
-                    if (!data.title) continue;
-
-                    let downloadUrl = '';
-                    let qualityLabel = '';
-
-                    if (format === 'audio') {
-                        // Ambil audio stream terbaik
-                        const audioStreams = data.audioStreams || [];
-                        if (audioStreams.length > 0) {
-                            // Urutkan berdasarkan bitrate tertinggi
-                            audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-                            downloadUrl = audioStreams[0].url;
-                            qualityLabel = `${audioStreams[0].bitrate ? Math.round(audioStreams[0].bitrate/1000) + 'kbps' : 'Audio'} • ${audioStreams[0].mimeType?.split('/')[1]?.split(';')[0] || 'm4a'}`;
-                        }
-                    } else {
-                        // Ambil video stream 720p atau yang terdekat
-                        const videoStreams = (data.videoStreams || []).filter(s => s.quality && !s.quality.includes('audio'));
-                        let bestStream = videoStreams.find(s => s.quality === '720p') || 
-                                        videoStreams.find(s => s.quality === '480p') ||
-                                        videoStreams[0];
-                        
-                        if (bestStream) {
-                            downloadUrl = bestStream.url;
-                            qualityLabel = `${bestStream.quality} • ${bestStream.mimeType?.split('/')[1]?.split(';')[0] || 'mp4'}`;
-                        }
+                    if (result) {
+                        showResult(result.title, result.url);
+                        resetButton();
+                        return; 
                     }
-
-                    if (!downloadUrl) {
-                        throw new Error('Tidak ditemukan stream yang sesuai');
-                    }
-
-                    // Tampilkan hasil
-                    document.getElementById('videoTitle').innerHTML = 
-                        `<strong>${data.title}</strong><br><small style="color:#666">${qualityLabel}</small>`;
-                    document.getElementById('downloadLink').href = downloadUrl;
-                    resultEl.style.display = 'block';
-                    
-                    // Reset tombol dan keluar dari loop
-                    btn.disabled = false;
-                    btn.textContent = 'Cari Video';
-                    return;
-
                 } catch (err) {
-                    lastError = err.message;
-                    continue; // Coba instance berikutnya
+                    console.log(`Server alternatif mencoba menghubungkan...`);
+                    continue; 
                 }
             }
 
-            // Jika semua instance gagal
-            showError('Semua server sedang sibuk. Coba lagi nanti.');
+            showError('Semua server sedang sibuk. Silakan coba beberapa saat lagi.');
+            resetButton();
+        }
+
+        function showResult(title, downloadUrl) {
+            document.getElementById('videoTitle').textContent = title;
+            document.getElementById('downloadLink').href = downloadUrl;
+            document.getElementById('resultBox').style.display = 'block';
+        }
+
+        function showError(msg) {
+            document.getElementById('errorMsg').textContent = ' ' + msg;
+            document.getElementById('errorMsg').style.display = 'block';
+        }
+
+        function resetButton() {
+            const btn = document.getElementById('searchBtn');
             btn.disabled = false;
             btn.textContent = 'Cari Video';
         }
 
-        function showError(msg) {
-            const el = document.getElementById('errorMsg');
-            el.textContent = '❌ ' + msg;
-            el.style.display = 'block';
-        }
-
-        // Support tekan Enter untuk submit
         document.getElementById('urlInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleDownload();
         });
