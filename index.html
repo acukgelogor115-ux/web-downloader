@@ -20,6 +20,7 @@
         .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .download-btn { display: inline-block; margin-top: 12px; padding: 10px 24px; background: #2e7d32; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        .format-select { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 14px; margin-bottom: 16px; outline: none; }
     </style>
 </head>
 <body>
@@ -28,18 +29,32 @@
         <p class="subtitle">MP4 / MP3 • Resolusi & Ukuran File Lengkap</p>
         
         <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off">
+        
+        <select id="formatSelect" class="format-select">
+            <option value="video">🎬 Video (MP4)</option>
+            <option value="audio">🎧 Audio (MP3/M4A)</option>
+        </select>
+        
         <button id="searchBtn" onclick="handleDownload()">Cari Video</button>
         
         <div class="error" id="errorMsg"></div>
         <div class="result" id="resultBox">
-            <p id="videoTitle" style="font-weight:bold; margin-bottom:8px;"></p>
-            <a id="downloadLink" class="download-btn" href="#" target="_blank">️ Download Sekarang</a>
+            <p id="videoTitle" style="font-weight:bold; margin-bottom:8px; word-break: break-word;"></p>
+            <a id="downloadLink" class="download-btn" href="#" target="_blank">⬇️ Download Sekarang</a>
         </div>
     </div>
 
     <script>
+        // Daftar instance Piped publik (fallback jika satu down)
+        const PIPED_INSTANCES = [
+            'https://pipedapi.kavin.rocks',
+            'https://api.piped.projectsegfau.lt',
+            'https://piped-api.privacy.com.de'
+        ];
+
         async function handleDownload() {
             const url = document.getElementById('urlInput').value.trim();
+            const format = document.getElementById('formatSelect').value;
             const btn = document.getElementById('searchBtn');
             const errorEl = document.getElementById('errorMsg');
             const resultEl = document.getElementById('resultBox');
@@ -47,7 +62,23 @@
             errorEl.style.display = 'none';
             resultEl.style.display = 'none';
             
-            if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+            // Ekstrak Video ID dari berbagai format URL YouTube
+            let videoId = '';
+            try {
+                if (url.includes('youtu.be/')) {
+                    videoId = url.split('youtu.be/')[1].split('?')[0];
+                } else if (url.includes('youtube.com/watch')) {
+                    const urlObj = new URL(url);
+                    videoId = urlObj.searchParams.get('v');
+                } else if (url.includes('youtube.com/shorts/')) {
+                    videoId = url.split('shorts/')[1].split('?')[0];
+                }
+            } catch (e) {
+                showError('Format URL tidak valid!');
+                return;
+            }
+
+            if (!videoId || videoId.length !== 11) {
                 showError('Masukkan link YouTube yang valid!');
                 return;
             }
@@ -55,42 +86,69 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="loading"></span> Memproses...';
 
-            try {
-                // Menggunakan corsproxy.io untuk menghindari blokir CORS di GitHub Pages
-                const response = await fetch('https://corsproxy.io/?https://api.cobalt.tools/api/json', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: url,
-                        vQuality: '720',
-                        filenamePattern: 'basic',
-                        isAudioOnly: false
-                    })
-                });
+            let lastError = '';
+            
+            // Coba setiap instance Piped sampai berhasil
+            for (const instance of PIPED_INSTANCES) {
+                try {
+                    const response = await fetch(`${instance}/streams/${videoId}`);
+                    
+                    if (!response.ok) continue;
+                    
+                    const data = await response.json();
+                    
+                    if (!data.title) continue;
 
-                const data = await response.json();
+                    let downloadUrl = '';
+                    let qualityLabel = '';
 
-                if (data.status === 'error') {
-                    throw new Error(data.text || 'Gagal memproses video');
+                    if (format === 'audio') {
+                        // Ambil audio stream terbaik
+                        const audioStreams = data.audioStreams || [];
+                        if (audioStreams.length > 0) {
+                            // Urutkan berdasarkan bitrate tertinggi
+                            audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+                            downloadUrl = audioStreams[0].url;
+                            qualityLabel = `${audioStreams[0].bitrate ? Math.round(audioStreams[0].bitrate/1000) + 'kbps' : 'Audio'} • ${audioStreams[0].mimeType?.split('/')[1]?.split(';')[0] || 'm4a'}`;
+                        }
+                    } else {
+                        // Ambil video stream 720p atau yang terdekat
+                        const videoStreams = (data.videoStreams || []).filter(s => s.quality && !s.quality.includes('audio'));
+                        let bestStream = videoStreams.find(s => s.quality === '720p') || 
+                                        videoStreams.find(s => s.quality === '480p') ||
+                                        videoStreams[0];
+                        
+                        if (bestStream) {
+                            downloadUrl = bestStream.url;
+                            qualityLabel = `${bestStream.quality} • ${bestStream.mimeType?.split('/')[1]?.split(';')[0] || 'mp4'}`;
+                        }
+                    }
+
+                    if (!downloadUrl) {
+                        throw new Error('Tidak ditemukan stream yang sesuai');
+                    }
+
+                    // Tampilkan hasil
+                    document.getElementById('videoTitle').innerHTML = 
+                        `<strong>${data.title}</strong><br><small style="color:#666">${qualityLabel}</small>`;
+                    document.getElementById('downloadLink').href = downloadUrl;
+                    resultEl.style.display = 'block';
+                    
+                    // Reset tombol dan keluar dari loop
+                    btn.disabled = false;
+                    btn.textContent = 'Cari Video';
+                    return;
+
+                } catch (err) {
+                    lastError = err.message;
+                    continue; // Coba instance berikutnya
                 }
-
-                if (!data.url) {
-                    throw new Error('Tidak ditemukan link download');
-                }
-
-                document.getElementById('videoTitle').textContent = 'Video berhasil diproses!';
-                document.getElementById('downloadLink').href = data.url;
-                resultEl.style.display = 'block';
-
-            } catch (err) {
-                showError(err.message || 'Server sedang sibuk. Coba lagi nanti.');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Cari Video';
             }
+
+            // Jika semua instance gagal
+            showError('Semua server sedang sibuk. Coba lagi nanti.');
+            btn.disabled = false;
+            btn.textContent = 'Cari Video';
         }
 
         function showError(msg) {
@@ -99,6 +157,7 @@
             el.style.display = 'block';
         }
 
+        // Support tekan Enter untuk submit
         document.getElementById('urlInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleDownload();
         });
