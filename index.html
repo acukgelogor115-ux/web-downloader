@@ -26,7 +26,7 @@
 <body>
     <div class="container">
         <h1>🎵 YouTube Downloader Pro</h1>
-        <p class="subtitle">MP4 / MP3 • Resolusi & Ukuran File Lengkap</p>
+        <p class="subtitle">MP4 / MP3 • Didukung oleh yt-dlp Cloud</p>
         
         <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off">
         
@@ -45,30 +45,6 @@
     </div>
 
     <script>
-        // Daftar API publik alternatif dengan parameter yang diperbarui
-        const API_ENDPOINTS = [
-            { 
-                url: 'https://api.cobalt.tools/api/json',
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: (youtubeUrl, format) => JSON.stringify({
-                    url: youtubeUrl,
-                    vQuality: '720',
-                    filenamePattern: 'basic',
-                    downloadMode: format === 'audio' ? 'audio' : 'video'
-                }),
-                parse: (data) => data.url ? { url: data.url, title: data.text || 'Konten berhasil diproses!' } : null
-            },
-            {
-                url: 'https://api.savetube.me/download',
-                method: 'GET',
-                headers: {},
-                body: null,
-                getUrl: (youtubeUrl, format) => `https://api.savetube.me/download?url=${encodeURIComponent(youtubeUrl)}&format=${format}`,
-                parse: (data) => data.status === 'success' ? { url: data.download_url, title: data.title || 'Download Siap!' } : null
-            }
-        ];
-
         async function handleDownload() {
             const url = document.getElementById('urlInput').value.trim();
             const format = document.getElementById('formatSelect').value;
@@ -80,45 +56,33 @@
             resultEl.style.display = 'none';
             
             if (!url) {
-                showError('Masukkan link terlebih dahulu!');
+                showError('Masukkan link YouTube terlebih dahulu!');
                 return;
             }
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Memproses...';
+            btn.innerHTML = '<span class="loading"></span> Memproses yt-dlp...';
 
-            // Looping untuk mencoba setiap API secara otomatis jika salah satu sibuk
-            for (const api of API_ENDPOINTS) {
-                try {
-                    let response;
-                    if (api.method === 'POST') {
-                        response = await fetch(api.url, {
-                            method: 'POST',
-                            headers: api.headers,
-                            body: api.body(url, format)
-                        });
-                    } else if (api.getUrl) {
-                        response = await fetch(api.getUrl(url, format));
-                    }
-
-                    if (!response || !response.ok) continue;
-                    
-                    const data = await response.json();
-                    const result = api.parse(data);
-                    
-                    if (result) {
-                        showResult(result.title, result.url);
-                        resetButton();
-                        return; 
-                    }
-                } catch (err) {
-                    console.log(`Server alternatif mencoba menghubungkan...`);
-                    continue; 
+            try {
+                // Memanggil endpoint internal server publik Anda
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, format: format })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.url) {
+                    showResult(data.title, data.url);
+                } else {
+                    showError(data.error || 'Terjadi kesalahan pada server pengunduh.');
                 }
+            } catch (err) {
+                showError('Gagal terhubung ke cloud server.');
+            } finally {
+                resetButton();
             }
-
-            showError('Semua server sedang sibuk. Silakan coba beberapa saat lagi.');
-            resetButton();
         }
 
         function showResult(title, downloadUrl) {
