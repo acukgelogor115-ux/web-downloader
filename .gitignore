@@ -1,0 +1,6 @@
+node_modules/
+*.py
+*.mp3
+downloads/
+package-lock.json
+.env
