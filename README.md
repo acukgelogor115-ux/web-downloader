@@ -16,3 +16,7 @@ Aplikasi web sederhana untuk mengunduh video atau audio dari YouTube secara grat
 ## ⚠️ Catatan
 - Gunakan Secure DNS jika API terblokir ISP.
 - Hanya untuk edukasi & penggunaan pribadi.
+
+⚠️ Hak Cipta/Copyright
+© 2026 Manz Uzumaki. All rights reserved.
+Dilarang keras menyalin, mengubah, memodifikasi, mendistribusikan ulang, atau menggunakan kode dalam repositori ini untuk kepentingan komersial tanpa izin tertulis dari pemilik kode asli.
