@@ -15,35 +15,15 @@
             align-items: center;
             padding: 20px;
             position: relative;
-            overflow-x: hidden;
-        }
-        
-        body::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: float 20s linear infinite;
-            pointer-events: none;
-        }
-        
-        @keyframes float {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
         }
         
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
+            background: white;
             border-radius: 24px;
             padding: 40px;
             max-width: 480px;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
             text-align: center;
             position: relative;
             z-index: 1;
@@ -63,7 +43,6 @@
             font-size: 28px;
             margin-bottom: 8px;
             font-weight: 800;
-            letter-spacing: -0.5px;
         }
         
         .subtitle {
@@ -89,7 +68,6 @@
         input:focus, select:focus {
             border-color: #ff0000;
             box-shadow: 0 0 0 4px rgba(255,0,0,0.1);
-            transform: translateY(-2px);
         }
         
         button {
@@ -113,30 +91,13 @@
             box-shadow: 0 6px 20px rgba(255,0,0,0.4);
         }
         
-        button:active {
-            transform: translateY(0);
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
-        
         .result {
             margin-top: 24px;
             padding: 20px;
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+            background: #fff5f5;
             border-radius: 16px;
             display: none;
             border: 2px solid rgba(255,0,0,0.1);
-            animation: fadeIn 0.4s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
         }
         
         .error {
@@ -151,42 +112,6 @@
             border-left: 4px solid #d32f2f;
         }
         
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .download-btn {
-            display: inline-block;
-            margin-top: 12px;
-            padding: 12px 28px;
-            background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 700;
-            box-shadow: 0 4px 15px rgba(46,125,50,0.3);
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(46,125,50,0.4);
-        }
-        
         .footer {
             margin-top: 28px;
             font-size: 12px;
@@ -198,13 +123,6 @@
             color: #ff0000;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .footer a:hover {
-            text-decoration: underline;
-            transform: translateX(2px);
-            display: inline-block;
         }
         
         .copyright {
@@ -217,10 +135,7 @@
         }
         
         .copyright strong {
-            background: linear-gradient(135deg, #ff0000 0%, #ff6b6b 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff0000;
             font-weight: 800;
         }
         
@@ -230,11 +145,6 @@
             border-radius: 12px;
             margin-bottom: 16px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-            transition: transform 0.3s ease;
-        }
-        
-        .thumb:hover {
-            transform: scale(1.02);
         }
         
         #videoTitle {
@@ -277,7 +187,6 @@
     </div>
 
     <script>
-        // Daftar community instance Cobalt (tanpa Turnstile, YouTube aktif)
         const API_INSTANCES = [
             'https://api.cobalt.blackcat.sweeux.org',
             'https://cobaltapi.kittycat.boo',
