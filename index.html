@@ -297,7 +297,7 @@
         <!-- JUDUL DINAMIS -->
         <h1 id="pageTitle">🎵 Downloader Musik</h1>
 
-        <!-- SECTION 1: MUSIC DOWNLOADER (KODE LAMA LO, UDAH DIBUNGKUS) -->
+        <!-- SECTION 1: MUSIC DOWNLOADER -->
         <div class="section" id="musicSection">
             <p class="subtitle">Unduh MP3/MP4 dari YouTube dengan Cepat</p>
             
@@ -318,7 +318,7 @@
             </div>
         </div>
 
-        <!-- SECTION 2: TIKTOK DOWNLOADER (FITUR BARU) -->
+        <!-- SECTION 2: TIKTOK DOWNLOADER -->
         <div class="section" id="tiktokSection" style="display:none;">
             <p class="subtitle">Download Video TikTok Tanpa Watermark 🚫💧</p>
             
@@ -388,7 +388,7 @@
             document.getElementById('menuDropdown').classList.remove('show');
         }
 
-        // === YOUTUBE DOWNLOADER (KODE LAMA LO) ===
+        // === FETCH HELPER ===
         async function tryFetch(instances, index, options) {
             if (index >= instances.length) {
                 throw new Error('Semua server tidak merespons. Coba lagi nanti.');
@@ -408,6 +408,7 @@
             }
         }
 
+        // === YOUTUBE DOWNLOADER ===
         async function handleDownload() {
             const url = document.getElementById('urlInput').value.trim();
             const format = document.getElementById('formatSelect').value;
@@ -517,7 +518,7 @@
             if (e.key === 'Enter') handleDownload();
         });
 
-        // === TIKTOK DOWNLOADER (FITUR BARU) ===
+        // === TIKTOK DOWNLOADER ===
         async function handleTiktokDownload() {
             const url = document.getElementById('tiktokUrl').value.trim();
             const btn = document.getElementById('tiktokBtn');
