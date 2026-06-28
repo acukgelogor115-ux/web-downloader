@@ -25,7 +25,7 @@
 <body>
     <div class="container">
         <h1>🎵 YouTube Downloader Pro</h1>
-        <p class="subtitle">MP4 / MP3 • Powered by Cobalt API 2026</p>
+        <p class="subtitle">MP4 / MP3 • Powered by Private Cobalt API</p>
         
         <!-- URL default untuk testing -->
         <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off" value="https://www.youtube.com/watch?v=dQw4W9WgXcQ">
@@ -71,7 +71,7 @@
             btn.innerHTML = '<span class="loading"></span> Memproses...';
 
             try {
-                // Menggunakan Cobalt API Alternative Instance (Lebih stabil di Indonesia)
+                // Menggunakan Private Railway Instance (Sudah terintegrasi)
                 const response = await fetch('https://cobalt-production-48f6.up.railway.app/api/json', {
                     method: 'POST',
                     headers: { 
@@ -89,10 +89,14 @@
                 
                 const data = await response.json();
                 
+                // Penanganan respons yang lebih robust
                 if (data.status === 'stream' || data.status === 'redirect') {
-                    showResult('Video Siap Diunduh!', data.url);
+                    showResult('Video berhasil diproses!', data.url);
                 } else if (data.status === 'error') {
                     showError(data.text || 'Video tidak dapat diproses.');
+                } else if (data.url) {
+                    // Fallback jika status tidak dikenali tapi ada URL
+                    showResult('Video berhasil diproses!', data.url);
                 } else {
                     showError('Terjadi kesalahan pada server pengunduh.');
                 }
