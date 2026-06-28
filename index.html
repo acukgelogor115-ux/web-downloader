@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Downloader Musik - Manz Uzumaki</title>
+    <title>Downloader Musik & TikTok - Manz Uzumaki</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
         
@@ -154,27 +154,183 @@
             color: #333;
             font-size: 15px;
         }
+
+        /* === MENU TITIK TIGA (⋮) === */
+        .menu-container {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+        }
+
+        .menu-dots {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 2px solid #ff0050;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-dots:hover, .menu-dots:active {
+            background: #ff0050;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 55px;
+            left: 0;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #ff0050;
+            border-radius: 10px;
+            min-width: 220px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-dropdown.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .menu-dropdown a {
+            display: block;
+            padding: 14px 18px;
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.2s;
+        }
+
+        .menu-dropdown a:last-child {
+            border-bottom: none;
+        }
+
+        .menu-dropdown a:hover, .menu-dropdown a:active {
+            background: #ff0050;
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: rgba(255, 0, 80, 0.3);
+            margin: 0;
+        }
+
+        /* === TIKTOK SECTION STYLES === */
+        #tiktokSection input:focus {
+            border-color: #ff0050;
+            box-shadow: 0 0 0 4px rgba(255,0,80,0.1);
+        }
+
+        #tiktokSection button {
+            background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
+            box-shadow: 0 4px 15px rgba(255,0,80,0.3);
+        }
+
+        #tiktokSection button:hover {
+            box-shadow: 0 6px 20px rgba(255,0,80,0.4);
+        }
+
+        #tiktokSection .result {
+            background: #fff0f5;
+            border: 2px solid rgba(255,0,80,0.1);
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #ff0050;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            background: #e6004a;
+            transform: translateY(-2px);
+        }
+
+        /* === SECTION TRANSITION === */
+        .section {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
+    <!-- MENU TITIK TIGA DI POJOK KIRI ATAS -->
+    <div class="menu-container">
+        <button class="menu-dots" onclick="toggleMenu()">⋮</button>
+        <div class="menu-dropdown" id="menuDropdown">
+            <a href="#" onclick="showSection('music')">🎵 Music Downloader</a>
+            <a href="#" onclick="showSection('tiktok')">🎬 Downloader VtTiktok</a>
+            <div class="menu-divider"></div>
+            <a href="#" onclick="showAbout()">ℹ️ Tentang</a>
+        </div>
+    </div>
+
     <div class="container">
-        <h1>🎵 Downloader Musik</h1>
-        <p class="subtitle">Unduh MP3/MP4 dari YouTube dengan Cepat</p>
-        
-        <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off">
-        
-        <select id="formatSelect">
-            <option value="audio">🎧 Audio (MP3)</option>
-            <option value="video">🎬 Video (MP4)</option>
-        </select>
-        
-        <button id="searchBtn" onclick="handleDownload()">Mulai Unduh</button>
-        
-        <div class="error" id="errorMsg"></div>
-        <div class="result" id="resultBox">
-            <img id="thumbnail" class="thumb" src="" alt="" style="display:none;">
-            <p id="videoTitle" style="font-weight:bold; margin-bottom:8px; word-break: break-word;"></p>
-            <a id="downloadLink" class="download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇️ Download Sekarang</a>
+        <!-- JUDUL DINAMIS -->
+        <h1 id="pageTitle">🎵 Downloader Musik</h1>
+
+        <!-- SECTION 1: MUSIC DOWNLOADER (KODE LAMA LO, UDAH DIBUNGKUS) -->
+        <div class="section" id="musicSection">
+            <p class="subtitle">Unduh MP3/MP4 dari YouTube dengan Cepat</p>
+            
+            <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off">
+            
+            <select id="formatSelect">
+                <option value="audio">🎧 Audio (MP3)</option>
+                <option value="video">🎬 Video (MP4)</option>
+            </select>
+            
+            <button id="searchBtn" onclick="handleDownload()">Mulai Unduh</button>
+            
+            <div class="error" id="errorMsg"></div>
+            <div class="result" id="resultBox">
+                <img id="thumbnail" class="thumb" src="" alt="" style="display:none;">
+                <p id="videoTitle" style="font-weight:bold; margin-bottom:8px; word-break: break-word;"></p>
+                <a id="downloadLink" class="download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇️ Download Sekarang</a>
+            </div>
+        </div>
+
+        <!-- SECTION 2: TIKTOK DOWNLOADER (FITUR BARU) -->
+        <div class="section" id="tiktokSection" style="display:none;">
+            <p class="subtitle">Download Video TikTok Tanpa Watermark 🚫💧</p>
+            
+            <input type="text" id="tiktokUrl" placeholder="Tempel link TikTok di sini..." autocomplete="off">
+            
+            <button id="tiktokBtn" onclick="handleTiktokDownload()">🎬 Download Video TikTok</button>
+            
+            <div class="error" id="tiktokError"></div>
+            <div class="result" id="tiktokResult">
+                <p id="tiktokTitle" style="font-weight:bold; margin-bottom:8px; word-break: break-word;"></p>
+                <a id="tiktokDownloadLink" class="download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇️ Download Video</a>
+            </div>
         </div>
         
         <div class="footer">
@@ -194,6 +350,45 @@
             'https://rue-cobalt.xenon.zone'
         ];
 
+        // === MENU TITIK TIGA ===
+        function toggleMenu() {
+            const menu = document.getElementById('menuDropdown');
+            menu.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('menuDropdown');
+            const dots = document.querySelector('.menu-dots');
+            if (!dots.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // === GANTI SECTION ===
+        function showSection(type) {
+            const musicSec = document.getElementById('musicSection');
+            const tiktokSec = document.getElementById('tiktokSection');
+            const title = document.getElementById('pageTitle');
+            
+            if (type === 'music') {
+                musicSec.style.display = 'block';
+                tiktokSec.style.display = 'none';
+                title.innerHTML = '🎵 Downloader Musik';
+            } else if (type === 'tiktok') {
+                musicSec.style.display = 'none';
+                tiktokSec.style.display = 'block';
+                title.innerHTML = '🎬 Downloader VtTiktok';
+            }
+            
+            document.getElementById('menuDropdown').classList.remove('show');
+        }
+
+        function showAbout() {
+            alert('🍥 Manz Uzumaki Downloader\n© 2026 Manz Uzumaki. All rights reserved.\n\nTools downloader musik & video TikTok tanpa watermark.');
+            document.getElementById('menuDropdown').classList.remove('show');
+        }
+
+        // === YOUTUBE DOWNLOADER (KODE LAMA LO) ===
         async function tryFetch(instances, index, options) {
             if (index >= instances.length) {
                 throw new Error('Semua server tidak merespons. Coba lagi nanti.');
@@ -320,6 +515,92 @@
 
         document.getElementById('urlInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleDownload();
+        });
+
+        // === TIKTOK DOWNLOADER (FITUR BARU) ===
+        async function handleTiktokDownload() {
+            const url = document.getElementById('tiktokUrl').value.trim();
+            const btn = document.getElementById('tiktokBtn');
+            const errorEl = document.getElementById('tiktokError');
+            const resultEl = document.getElementById('tiktokResult');
+            
+            errorEl.style.display = 'none';
+            resultEl.style.display = 'none';
+            
+            if (!url) {
+                showTiktokError('Masukkan link TikTok terlebih dahulu!');
+                return;
+            }
+
+            if (!url.includes('tiktok.com') && !url.includes('vm.tiktok.com')) {
+                showTiktokError('Format link TikTok tidak valid!');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Sedang Memproses...';
+
+            try {
+                const requestBody = {
+                    url: url,
+                    downloadMode: 'auto',
+                    videoQuality: '720',
+                    filenameStyle: 'basic',
+                    tiktokFullAudio: false,
+                    tiktokH265: false
+                };
+
+                const response = await tryFetch(API_INSTANCES, 0, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                console.log('TikTok Response:', data);
+                
+                if (data.status === 'tunnel' || data.status === 'redirect') {
+                    showTiktokResult(data.filename || 'Video TikTok berhasil diproses!', data.url);
+                } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+                    showTiktokResult('Video TikTok berhasil diproses!', data.picker[0].url);
+                } else if (data.status === 'error') {
+                    const errMsg = data.error?.code || data.text || 'Video TikTok tidak dapat diproses.';
+                    showTiktokError(errMsg);
+                } else if (data.url) {
+                    showTiktokResult('Video TikTok berhasil diproses!', data.url);
+                } else {
+                    showTiktokError('Response tidak dikenali. Coba lagi.');
+                }
+            } catch (err) {
+                console.error('TikTok Error:', err);
+                showTiktokError('Gagal: ' + err.message);
+            } finally {
+                resetTiktokButton();
+            }
+        }
+
+        function showTiktokResult(title, downloadUrl) {
+            document.getElementById('tiktokTitle').textContent = title;
+            document.getElementById('tiktokDownloadLink').href = downloadUrl;
+            document.getElementById('tiktokResult').style.display = 'block';
+        }
+
+        function showTiktokError(msg) {
+            document.getElementById('tiktokError').textContent = '❌ ' + msg;
+            document.getElementById('tiktokError').style.display = 'block';
+        }
+
+        function resetTiktokButton() {
+            const btn = document.getElementById('tiktokBtn');
+            btn.disabled = false;
+            btn.textContent = '🎬 Download Video TikTok';
+        }
+
+        document.getElementById('tiktokUrl').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleTiktokDownload();
         });
     </script>
 </body>
