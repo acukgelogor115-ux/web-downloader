@@ -307,7 +307,7 @@
             <div class="error" id="errorMsg"></div>
             <div class="result" id="resultBox">
                 <img id="thumbnail" class="thumb" src="" alt="" style="display:none;">
-                <p id="videoTitle" style="font-weight:bold; margin-bottom:8px; word-break: break-word;"></p>
+                <p id="videoTitle"></p>
                 <a id="downloadLink" class="download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇️ Download Sekarang</a>
             </div>
         </div>
@@ -321,7 +321,7 @@
             
             <div class="error" id="tiktokError"></div>
             <div class="result" id="tiktokResult">
-                <p id="tiktokTitle" style="font-weight:bold; margin-bottom:8px; word-break: break-word;"></p>
+                <p id="tiktokTitle"></p>
                 <a id="tiktokDownloadLink" class="download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇️ Download Video</a>
             </div>
         </div>
@@ -336,16 +336,10 @@
     </div>
 
     <script>
-        const API_INSTANCES = [
-            'https://cobalt.api.timelessnesses.me',
-            'https://cobalt-api.kwiatekmiki.com',
-            'https://api.cobalt.blackcat.sweeux.org',
-            'https://cobalt.owo.cafe'
-        ];
+        const WORKER_URL = 'https://manz-proxy.acukgelogor115.workers.dev';
 
         function toggleMenu() {
-            const menu = document.getElementById('menuDropdown');
-            menu.classList.toggle('show');
+            document.getElementById('menuDropdown').classList.toggle('show');
         }
 
         document.addEventListener('click', function(e) {
@@ -377,31 +371,6 @@
         function showAbout() {
             alert('🍥 Manz Uzumaki Downloader\n© 2026 Manz Uzumaki. All rights reserved.\n\nTools downloader musik & video TikTok tanpa watermark.');
             document.getElementById('menuDropdown').classList.remove('show');
-        }
-
-        // === FETCH HELPER DENGAN CORS PROXY ===
-        async function tryFetch(instances, index, options) {
-            if (index >= instances.length) {
-                throw new Error('Semua server tidak merespons atau diblokir. Coba lagi nanti.');
-            }
-            
-            const targetUrl = instances[index] + '/';
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-            
-            try {
-                const response = await fetch(proxyUrl, {
-                    ...options,
-                    signal: AbortSignal.timeout(20000)
-                });
-                
-                if (!response.ok && response.status !== 200) {
-                    throw new Error('HTTP ' + response.status);
-                }
-                return response;
-            } catch (err) {
-                console.warn(`Instance ${instances[index]} gagal:`, err.message);
-                return tryFetch(instances, index + 1, options);
-            }
         }
 
         async function handleDownload() {
@@ -438,7 +407,7 @@
                     filenameStyle: 'basic'
                 };
 
-                const response = await tryFetch(API_INSTANCES, 0, {
+                const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -545,7 +514,7 @@
                     tiktokH265: false
                 };
 
-                const response = await tryFetch(API_INSTANCES, 0, {
+                const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -558,126 +527,19 @@
                 console.log('TikTok Response:', data);
                 
                 if (data.status === 'tunnel' || data.status === 'redirect') {
-                    showResult(data.filename || 'File berhasil diproses!', data.url);
-                } else if (data.status === 'picker' && data.audio && data.picker) {
-                    if (format === 'audio') {
-                        showResult(data.audio.filename || 'Audio berhasil diproses!', data.audio.url);
-                    } else if (data.picker.length > 0) {
-                        showResult('Video berhasil diproses!', data.picker[0].url);
-                    } else {
-                        showError('Tidak ada file yang tersedia.');
-                    }
+                    showTiktokResult(data.filename || 'Video berhasil diproses!', data.url);
+                } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+                    showTiktokResult('Video berhasil diproses!', data.picker[0].url);
                 } else if (data.status === 'error') {
                     const errMsg = data.error?.code || data.text || 'Video tidak dapat diproses.';
-                    showError(errMsg);
-                } else if (data.url) {
-                    showResult('File berhasil diproses!', data.url);
-                } else {
-                    showError('Response tidak dikenali. Coba lagi.');
-                }
-            } catch (err) {
-                console.error('Error:', err);
-                showError('Gagal: ' + err.message);
-            } finally {
-                resetButton();
-            }
-        }
-
-        function showResult(title, downloadUrl) {
-            document.getElementById('videoTitle').textContent = title;
-            document.getElementById('downloadLink').href = downloadUrl;
-            
-            const urlInput = document.getElementById('urlInput').value.trim();
-            const videoId = extractVideoId(urlInput);
-            const thumbEl = document.getElementById('thumbnail');
-            if (videoId) {
-                thumbEl.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-                thumbEl.style.display = 'block';
-            } else {
-                thumbEl.style.display = 'none';
-            }
-            
-            document.getElementById('resultBox').style.display = 'block';
-        }
-
-        function extractVideoId(url) {
-            const match = url.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
-            return match ? match[1] : null;
-        }
-
-        function showError(msg) {
-            document.getElementById('errorMsg').textContent = '❌ ' + msg;
-            document.getElementById('errorMsg').style.display = 'block';
-        }
-
-        function resetButton() {
-            const btn = document.getElementById('searchBtn');
-            btn.disabled = false;
-            btn.textContent = 'Mulai Unduh';
-        }
-
-        document.getElementById('urlInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleDownload();
-        });
-
-        async function handleTiktokDownload() {
-            const url = document.getElementById('tiktokUrl').value.trim();
-            const btn = document.getElementById('tiktokBtn');
-            const errorEl = document.getElementById('tiktokError');
-            const resultEl = document.getElementById('tiktokResult');
-            
-            errorEl.style.display = 'none';
-            resultEl.style.display = 'none';
-            
-            if (!url) {
-                showTiktokError('Masukkan link TikTok terlebih dahulu!');
-                return;
-            }
-
-            if (!url.includes('tiktok.com') && !url.includes('vm.tiktok.com')) {
-                showTiktokError('Format link TikTok tidak valid!');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Sedang Memproses...';
-
-            try {
-                const requestBody = {
-                    url: url,
-                    downloadMode: 'auto',
-                    videoQuality: '720',
-                    filenameStyle: 'basic',
-                    tiktokFullAudio: false,
-                    tiktokH265: false
-                };
-
-                const response = await tryFetch(API_INSTANCES, 0, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                const data = await response.json();
-                console.log('TikTok Response:', data);
-                
-                if (data.status === 'tunnel' || data.status === 'redirect') {
-                    showTiktokResult(data.filename || 'Video TikTok berhasil diproses!', data.url);
-                } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
-                    showTiktokResult('Video TikTok berhasil diproses!', data.picker[0].url);
-                } else if (data.status === 'error') {
-                    const errMsg = data.error?.code || data.text || 'Video TikTok tidak dapat diproses.';
                     showTiktokError(errMsg);
                 } else if (data.url) {
-                    showTiktokResult('Video TikTok berhasil diproses!', data.url);
+                    showTiktokResult('Video berhasil diproses!', data.url);
                 } else {
                     showTiktokError('Response tidak dikenali. Coba lagi.');
                 }
             } catch (err) {
-                console.error('TikTok Error:', err);
+                console.error('Error:', err);
                 showTiktokError('Gagal: ' + err.message);
             } finally {
                 resetTiktokButton();
