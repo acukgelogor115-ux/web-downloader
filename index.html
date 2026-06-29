@@ -336,7 +336,10 @@
     </div>
 
     <script>
-        const WORKER_URL = 'https://manz-proxy.acukgelogor115.workers.dev';
+        // GANTI BAGIAN INI: Pakai proxy gratis corsproxy.io
+        const API_URL = 'https://api.cobalt.blackcat.sweeux.org/';
+        const PROXY_URL = 'https://corsproxy.io/?';
+        const WORKER_URL = PROXY_URL + encodeURIComponent(API_URL);
 
         function toggleMenu() {
             document.getElementById('menuDropdown').classList.toggle('show');
