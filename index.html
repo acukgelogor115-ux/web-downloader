@@ -336,7 +336,7 @@
     </div>
 
     <script>
-        // FIX: Tambah url= di proxy URL
+        // === BAGIAN YOUTUBE - TIDAK DIUBAH ===
         const API_URL = 'https://api.cobalt.blackcat.sweeux.org/';
         const PROXY_URL = 'https://corsproxy.io/?url=';
         const WORKER_URL = PROXY_URL + encodeURIComponent(API_URL);
@@ -485,6 +485,7 @@
             if (e.key === 'Enter') handleDownload();
         });
 
+        // === BAGIAN TIKTOK - DIPERBAIKI ===
         async function handleTiktokDownload() {
             const url = document.getElementById('tiktokUrl').value.trim();
             const btn = document.getElementById('tiktokBtn');
@@ -508,16 +509,17 @@
             btn.innerHTML = '⏳ Sedang Memproses...';
 
             try {
+                // Langsung ke API tanpa proxy
                 const requestBody = {
                     url: url,
                     downloadMode: 'auto',
                     videoQuality: '720',
                     filenameStyle: 'basic',
                     tiktokFullAudio: false,
-                    tiktokH265: false
+                    allowH265: false
                 };
 
-                const response = await fetch(WORKER_URL, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -526,6 +528,13 @@
                     body: JSON.stringify(requestBody)
                 });
                 
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('HTTP Error:', response.status, errorText);
+                    showTiktokError('Server error (' + response.status + '): ' + errorText);
+                    return;
+                }
+
                 const data = await response.json();
                 console.log('TikTok Response:', data);
                 
@@ -543,7 +552,11 @@
                 }
             } catch (err) {
                 console.error('Error:', err);
-                showTiktokError('Gagal: ' + err.message);
+                if (err.message.includes('Failed to fetch') || err.message.includes('CORS') || err.message.includes('NetworkError')) {
+                    showTiktokError('Koneksi ke server diblokir oleh browser (CORS). Coba pakai browser lain atau aktifkan Worker Cloudflare.');
+                } else {
+                    showTiktokError('Gagal: ' + err.message);
+                }
             } finally {
                 resetTiktokButton();
             }
@@ -551,24 +564,4 @@
 
         function showTiktokResult(title, downloadUrl) {
             document.getElementById('tiktokTitle').textContent = title;
-            document.getElementById('tiktokDownloadLink').href = downloadUrl;
-            document.getElementById('tiktokResult').style.display = 'block';
-        }
-
-        function showTiktokError(msg) {
-            document.getElementById('tiktokError').textContent = '❌ ' + msg;
-            document.getElementById('tiktokError').style.display = 'block';
-        }
-
-        function resetTiktokButton() {
-            const btn = document.getElementById('tiktokBtn');
-            btn.disabled = false;
-            btn.textContent = '🎬 Download Video TikTok';
-        }
-
-        document.getElementById('tiktokUrl').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleTiktokDownload();
-        });
-    </script>
-</body>
-</html>
+            document.getElementById
