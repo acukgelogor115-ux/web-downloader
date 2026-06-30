@@ -1,5 +1,5 @@
 <downloader.html>
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -317,9 +317,16 @@
 
             <input type="text" id="urlInput" placeholder="Tempel link YouTube di sini..." autocomplete="off">
 
-            <select id="formatSelect">
+            <select id="formatSelect" onchange="onFormatChange()">
                 <option value="audio">🎧 Audio (MP3)</option>
                 <option value="video">🎬 Video (MP4)</option>
+            </select>
+
+            <!-- Pilihan kualitas — berubah otomatis sesuai format -->
+            <select id="qualitySelect">
+                <option value="128">🎵 128 kbps (Standar)</option>
+                <option value="192">🎵 192 kbps (Bagus)</option>
+                <option value="320">🎵 320 kbps (Terbaik)</option>
             </select>
 
             <button id="searchBtn" onclick="handleDownload()">Mulai Unduh</button>
@@ -398,11 +405,33 @@
             document.getElementById('menuDropdown').classList.remove('show');
         }
 
+        // ─── Ganti opsi kualitas sesuai format ───────────────────────────────
+
+        function onFormatChange() {
+            const format = document.getElementById('formatSelect').value;
+            const qualitySelect = document.getElementById('qualitySelect');
+            if (format === 'audio') {
+                qualitySelect.innerHTML = `
+                    <option value="128">🎵 128 kbps (Standar)</option>
+                    <option value="192">🎵 192 kbps (Bagus)</option>
+                    <option value="320">🎵 320 kbps (Terbaik)</option>
+                `;
+            } else {
+                qualitySelect.innerHTML = `
+                    <option value="360">📱 360p (Ringan)</option>
+                    <option value="480">📺 480p (Standar)</option>
+                    <option value="720" selected>🎬 720p (HD)</option>
+                    <option value="1080">✨ 1080p (Full HD)</option>
+                `;
+            }
+        }
+
         // ─── YouTube / Music Downloader ───────────────────────────────────────
 
         async function handleDownload() {
             const url = document.getElementById('urlInput').value.trim();
             const format = document.getElementById('formatSelect').value;
+            const quality = document.getElementById('qualitySelect').value;
             const btn = document.getElementById('searchBtn');
             const errorEl = document.getElementById('errorMsg');
             const resultEl = document.getElementById('resultBox');
@@ -428,9 +457,9 @@
                 const requestBody = {
                     url: url,
                     downloadMode: format === 'audio' ? 'audio' : 'auto',
-                    videoQuality: '720',
+                    videoQuality: format === 'video' ? quality : '720',
                     audioFormat: 'mp3',
-                    audioBitrate: '128',
+                    audioBitrate: format === 'audio' ? quality : '128',
                     filenameStyle: 'basic'
                 };
 
@@ -554,14 +583,6 @@
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    showTiktokError('Server error (' + response.status + '): ' + errorText);
-                    return;
-                }
-
-                const data = await response.json();
-                console.log('TikTok Response:', data);
-
-                if (data.status === 'tunnel' || data.status === 'redirect') {
                     showTiktokResult(data.filename || 'Video berhasil diproses!', data.url);
                 } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
                     showTiktokResult('Video berhasil diproses!', data.picker[0].url);
