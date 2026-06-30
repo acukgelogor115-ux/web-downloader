@@ -1,5 +1,4 @@
-<downloader.html>
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -295,6 +294,63 @@
             color: #333;
             font-size: 15px;
         }
+
+        #photoSection input:focus {
+            border-color: #f5a623;
+            box-shadow: 0 0 0 4px rgba(245,166,35,0.1);
+        }
+
+        #photoSection button {
+            background: linear-gradient(135deg, #f5a623 0%, #f76b1c 100%);
+            box-shadow: 0 4px 15px rgba(245,166,35,0.3);
+        }
+
+        #photoSection button:hover {
+            box-shadow: 0 6px 20px rgba(245,166,35,0.4);
+        }
+
+        #photoSection .result {
+            background: #fffbf0;
+            border: 2px solid rgba(245,166,35,0.2);
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .photo-item img {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .photo-item a {
+            display: block;
+            margin-top: 6px;
+            padding: 8px;
+            background: #f5a623;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .photo-item a:hover {
+            background: #e09520;
+        }
+
+        #photoTitle {
+            font-weight: 700;
+            margin-bottom: 10px;
+            word-break: break-word;
+            color: #333;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
@@ -303,6 +359,7 @@
         <div class="menu-dropdown" id="menuDropdown">
             <a href="#" onclick="showSection('music')">🎵 Music Downloader</a>
             <a href="#" onclick="showSection('tiktok')">🎬 Downloader Video TikTok</a>
+            <a href="#" onclick="showSection('photo')">📸 Downloader Foto</a>
             <div class="menu-divider"></div>
             <a href="#" onclick="showAbout()">ℹ️ Tentang</a>
         </div>
@@ -336,6 +393,21 @@
                 <img id="thumbnail" class="thumb" src="" alt="" style="display:none;">
                 <p id="videoTitle"></p>
                 <a id="downloadLink" class="download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇️ Download Sekarang</a>
+            </div>
+        </div>
+
+        <!-- Photo Downloader Section -->
+        <div class="section" id="photoSection" style="display:none;">
+            <p class="subtitle">Download Foto dari Sosmed atau Link Gambar Langsung 🖼️</p>
+
+            <input type="text" id="photoUrl" placeholder="Tempel link foto / sosmed di sini..." autocomplete="off">
+
+            <button id="photoBtn" onclick="handlePhotoDownload()">📸 Download Foto</button>
+
+            <div class="error" id="photoError"></div>
+            <div class="result" id="photoResult">
+                <p id="photoTitle"></p>
+                <div id="photoGrid"></div>
             </div>
         </div>
 
@@ -383,18 +455,24 @@
         });
 
         function showSection(type) {
-            const musicSec = document.getElementById('musicSection');
+            const musicSec  = document.getElementById('musicSection');
             const tiktokSec = document.getElementById('tiktokSection');
-            const title = document.getElementById('pageTitle');
+            const photoSec  = document.getElementById('photoSection');
+            const title     = document.getElementById('pageTitle');
+
+            musicSec.style.display  = 'none';
+            tiktokSec.style.display = 'none';
+            photoSec.style.display  = 'none';
 
             if (type === 'music') {
                 musicSec.style.display = 'block';
-                tiktokSec.style.display = 'none';
                 title.innerHTML = '🎵 Downloader Musik';
             } else if (type === 'tiktok') {
-                musicSec.style.display = 'none';
                 tiktokSec.style.display = 'block';
                 title.innerHTML = '🎬 Downloader Video TikTok';
+            } else if (type === 'photo') {
+                photoSec.style.display = 'block';
+                title.innerHTML = '📸 Downloader Foto';
             }
 
             document.getElementById('menuDropdown').classList.remove('show');
@@ -583,6 +661,14 @@
 
                 if (!response.ok) {
                     const errorText = await response.text();
+                    showTiktokError('Server error (' + response.status + '): ' + errorText);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('TikTok Response:', data);
+
+                if (data.status === 'tunnel' || data.status === 'redirect') {
                     showTiktokResult(data.filename || 'Video berhasil diproses!', data.url);
                 } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
                     showTiktokResult('Video berhasil diproses!', data.picker[0].url);
@@ -617,6 +703,125 @@
 
         document.getElementById('tiktokUrl').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleTiktokDownload();
+        });
+
+        // ─── Photo Downloader ─────────────────────────────────────────────────
+
+        const DIRECT_IMAGE_REGEX = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i;
+
+        async function handlePhotoDownload() {
+            const url      = document.getElementById('photoUrl').value.trim();
+            const btn      = document.getElementById('photoBtn');
+            const errorEl  = document.getElementById('photoError');
+            const resultEl = document.getElementById('photoResult');
+            const gridEl   = document.getElementById('photoGrid');
+
+            errorEl.style.display  = 'none';
+            resultEl.style.display = 'none';
+            gridEl.innerHTML       = '';
+
+            if (!url) {
+                showPhotoError('Masukkan link foto terlebih dahulu!');
+                return;
+            }
+
+            btn.disabled    = true;
+            btn.innerHTML   = '⏳ Sedang Memproses...';
+
+            try {
+                // Jika link langsung ke file gambar
+                if (DIRECT_IMAGE_REGEX.test(url)) {
+                    showPhotoGrid([{ url: url, type: 'photo' }], 'Foto siap didownload!');
+                    return;
+                }
+
+                // Kalau link sosmed → pakai Cobalt API
+                const requestBody = {
+                    url: url,
+                    downloadMode: 'auto',
+                    filenameStyle: 'basic'
+                };
+
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    showPhotoError('Server error (' + response.status + '): ' + errorText);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Photo Response:', data);
+
+                if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+                    const photos = data.picker.filter(function(item) {
+                        return item.type === 'photo' || item.url;
+                    });
+                    if (photos.length > 0) {
+                        showPhotoGrid(photos, 'Ditemukan ' + photos.length + ' foto!');
+                    } else {
+                        showPhotoError('Tidak ada foto yang ditemukan di link ini.');
+                    }
+                } else if (data.status === 'tunnel' || data.status === 'redirect') {
+                    showPhotoGrid([{ url: data.url }], data.filename || 'Foto berhasil diproses!');
+                } else if (data.status === 'error') {
+                    const errMsg = (data.error && data.error.code) || data.text || 'Foto tidak dapat diproses.';
+                    showPhotoError(errMsg);
+                } else if (data.url) {
+                    showPhotoGrid([{ url: data.url }], 'Foto berhasil diproses!');
+                } else {
+                    showPhotoError('Respons tidak dikenali. Pastikan link valid.');
+                }
+            } catch (err) {
+                console.error('Photo Error:', err);
+                showPhotoError('Gagal terhubung ke server: ' + err.message);
+            } finally {
+                btn.disabled  = false;
+                btn.textContent = '📸 Download Foto';
+            }
+        }
+
+        function showPhotoGrid(items, title) {
+            document.getElementById('photoTitle').textContent = title;
+            const gridEl = document.getElementById('photoGrid');
+
+            if (items.length === 1) {
+                // Satu foto — tampilkan besar
+                gridEl.innerHTML = `
+                    <img src="${items[0].url}" style="width:100%;border-radius:12px;margin-bottom:10px;" onerror="this.style.display='none'">
+                    <a href="${items[0].url}" download target="_blank" rel="noopener noreferrer" class="download-btn" style="background:#f5a623;">⬇️ Download Foto</a>
+                `;
+            } else {
+                // Banyak foto — tampilkan grid
+                gridEl.className = 'photo-grid';
+                gridEl.innerHTML = items.map(function(item, i) {
+                    return `
+                        <div class="photo-item">
+                            <img src="${item.url}" alt="Foto ${i + 1}" onerror="this.style.display='none'">
+                            <a href="${item.url}" download target="_blank" rel="noopener noreferrer">⬇️ Foto ${i + 1}</a>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('photoResult').style.display = 'block';
+        }
+
+        function showPhotoError(msg) {
+            const el = document.getElementById('photoError');
+            el.textContent = '❌ ' + msg;
+            el.style.display = 'block';
+        }
+
+        document.getElementById('photoUrl').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handlePhotoDownload();
         });
     </script>
 </body>
